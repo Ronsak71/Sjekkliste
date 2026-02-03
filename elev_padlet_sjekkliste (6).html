@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elev – Sjekkliste Servering (LK20) – Padlet</title>
+  <style>
+    :root { --green:#16a34a; --amber:#f59e0b; --red:#dc2626; --text:#e6edf7; --card:#121a2b; --muted:#b9c1d1; }
+    * { box-sizing: border-box }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: linear-gradient(180deg,#0a1122,#0d152b); color: var(--text); }
+    header { text-align: center; padding: 18px; border-bottom: 1px solid rgba(255,255,255,.08) }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px 14px 40px }
+    .card { background: var(--card); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; margin-bottom: 14px }
+    .card .hd { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.06); font-weight: 600 }
+    .card .bd { padding: 12px 14px }
+    .row { display:grid; grid-template-columns: 1fr 180px; gap: 12px; align-items: center; padding: 10px }
+    .row:nth-child(odd) { background: rgba(255,255,255,.04) }
+    select { width: 100%; padding: 10px 12px; border-radius: 10px; color: white; border: 1px solid rgba(255,255,255,.15); background:#0f1830; outline: none }
+    input[type=text] { width: 100%; padding: 10px 12px; border-radius: 10px; color: white; border: 1px solid rgba(255,255,255,.15); background:#0f1830; outline: none }
+    button { appearance: none; border: 0; padding: 10px 14px; border-radius: 10px; cursor: pointer; color: #fff; background: linear-gradient(180deg,#5b67f1,#4f46e5); box-shadow: 0 6px 16px rgba(79,70,229,.35) }
+    .summary { margin-top: 8px; padding: 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08) }
+    .muted { color: var(--muted) }
+    textarea { width: 100%; min-height: 120px; background:#0f1830; color: var(--text); border:1px solid rgba(255,255,255,.15); border-radius:10px; padding:10px }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Elev – Sjekkliste Servering (LK20)</h1>
+    <p class="muted">Velg for hvert punkt: <b>Jeg kan / Må øve mer / Kan ikke</b>. Kopiér resultatet og lever i Padlet/Teams.</p>
+  </header>
+  <div class="container">
+    <div class="card">
+      <div class="hd">1) Dine opplysninger</div>
+      <div class="bd">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <input id="elevnavn" placeholder="Elevnavn" />
+          <input id="klasse" placeholder="Klasse (valgfritt)" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">2) Vurderingspunkter</div>
+      <div class="bd">
+        <div id="liste"></div>
+        <div class="summary" id="oppsummering">Oppsummering: –</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd">3) Lever resultat</div>
+      <div class="bd">
+        <div class="muted" style="margin-bottom:8px">Trykk <b>Kopier resultat</b> og lim inn i Padlet/Teams/Itslearning.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button id="kopier">Kopier resultat</button>
+          <span id="hint" class="muted"></span>
+        </div>
+        <div style="margin-top:10px">
+          <label class="muted">Forhåndsvisning (det som kopieres):</label>
+          <textarea id="preview" readonly></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const PUNKTER = ["Gjennomføre servering i tråd med hygieniske krav og trygg mat", "Bruke korrekt fagterminologi i kommunikasjon med gjester og kollegaer", "Presentere og beskrive mat- og drikkevarer på en profesjonell måte", "Tilpasse serveringen til ulike gjestetyper og behov", "Utføre servering etter bransjestandard (høyre/venstre, flyt, tempo)", "Bruke riktig rekkefølge ved servering og rydding", "Håndtere bestillinger profesjonelt og effektivt", "Identifisere allergener og informere gjester korrekt", "Utføre vinopptrekk og presentasjon av drikkevarer i tråd med rutiner", "Arbeide i tråd med HMS‑krav og sikker håndtering av varme produkter", "Utføre borddekking etter standard og tilpasset meny", "Samarbeide effektivt i serveringsteam og følge arbeidsrutiner", "Håndtere kundeklager på en profesjonell og løsningsorientert måte", "Bidra til god flyt i serveringslokalet (mise en place, forberedelser)", "Bruke digitale bestillings- og betalingssystemer korrekt", "Vise serviceholdning og ivareta gjestens totale opplevelse", "Evaluere eget arbeid og foreslå forbedringer i serveringssituasjoner"];
+const css = (k)=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const VALG = [
+  { value: "Jeg kan", color: css('--green') },
+  { value: "Må øve mer", color: css('--amber') },
+  { value: "Kan ikke", color: css('--red') }
+];
+
+const liste = document.getElementById('liste');
+function lagRad(idx, tekst){
+  const wrap=document.createElement('div');wrap.className='row';
+  const lbl=document.createElement('div');lbl.textContent=(idx+1)+'. '+tekst;lbl.style.fontWeight='600';
+  const sel=document.createElement('select');
+  VALG.forEach(v=>{const o=document.createElement('option');o.value=v.value;o.textContent=v.value;sel.appendChild(o);});
+  const update=()=>{const f=VALG.find(v=>v.value===sel.value); sel.style.background=f?f.color:'#1f2937';}
+  sel.addEventListener('change',()=>{update();oppsummer();}); update();
+  const right=document.createElement('div'); right.appendChild(sel);
+  wrap.appendChild(lbl); wrap.appendChild(right); return wrap;
+}
+function bygg(){PUNKTER.forEach((p,i)=>liste.appendChild(lagRad(i,p)));}
+bygg();
+function hent(){return [...document.querySelectorAll('select')].map(s=>s.value||'');}
+function oppsummer(){
+  const v=hent(); const t=v.length;
+  const k=v.filter(x=>x==='Jeg kan').length;
+  const o=v.filter(x=>x==='Må øve mer').length;
+  const i=v.filter(x=>x==='Kan ikke').length;
+  const pr=t? Math.round(100*k/t):0;
+  document.getElementById('oppsummering').textContent=`Oppsummering: Jeg kan: ${k}, Må øve mer: ${o}, Kan ikke: ${i} (Mestring: ${pr}%)`;
+  const data = {
+    elev: (document.getElementById('elevnavn').value||'Uten navn').trim(),
+    klasse: (document.getElementById('klasse').value||'').trim(),
+    verdier: v,
+    tidspunkt: new Date().toISOString()
+  };
+  document.getElementById('preview').value = JSON.stringify(data);
+}
+oppsummer();
+
+document.getElementById('elevnavn').addEventListener('input',oppsummer);
+document.getElementById('klasse').addEventListener('input',oppsummer);
+
+document.getElementById('kopier').onclick = async ()=>{
+  oppsummer();
+  const txt = document.getElementById('preview').value;
+  try{
+    await navigator.clipboard.writeText(txt);
+    document.getElementById('hint').textContent = 'Kopiert! Lim inn i Padlet-innleveringen din.';
+  }catch(e){
+    document.getElementById('preview').select(); document.execCommand('copy');
+    document.getElementById('hint').textContent = 'Kopiert (fallback). Lim inn i Padlet-innleveringen din.';
+  }
+};
+</script>
+</body>
+</html>
